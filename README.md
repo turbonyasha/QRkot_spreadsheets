@@ -39,7 +39,7 @@ QRKot — это приложение для управления благотв
 
 1. Клонируйте репозиторий:
     ```
-    git clone git@github.com:turbonyasha/cat_charity_fund.git
+    git clone git@github.com:turbonyasha/QRkot_spreadsheets.git
     ```
 2. Перейдите в каталог проекта:
     ```
