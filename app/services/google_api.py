@@ -7,6 +7,8 @@ from app.core.config import settings
 
 
 API_ERROR = 'Ошибка при обращении к Google API: {e}'
+ROW_NUMBER = 100
+COLUMN_NUMBER = 10
 TABLE_LENGTH_ERROR = (
     'Таблица больше доступного места!'
     'Размер этой таблицы: {rows_needed}x{columns_needed}, '
@@ -14,8 +16,6 @@ TABLE_LENGTH_ERROR = (
 )
 FORMAT = '%Y/%m/%d %H:%M:%S'
 REPORT_HEAD = 'Отчёт от {date}'
-ROW_NUMBER = 100
-COLUMN_NUMBER = 10
 SPREADHSEET_BODY = dict(
     properties=dict(
         title='',
@@ -93,9 +93,9 @@ async def spreadsheets_update_value(
         })
     sorted_projects.sort(key=itemgetter('total_seconds'))
     table_head = TABLE_HEAD.copy()
+    table_head[1][1] = datetime.now().strftime(FORMAT)
     table_values = [
-        *[head[1].format(date=datetime.now().strftime(FORMAT)) if isinstance(
-            head[1], str) else head[1] for head in table_head],
+        *table_head,
         *[list(map(
             str, [project['name'], project['duration'], project['description']]
         )) for project in sorted_projects]
@@ -105,11 +105,14 @@ async def spreadsheets_update_value(
         'values': table_values
     }
     rows_needed = len(table_values)
-    columns_needed = len(table_values[0]) if rows_needed > 0 else 0
+    columns_needed = max(
+        len(row) for row in table_values) if rows_needed > 0 else 0
     if rows_needed > ROW_NUMBER or columns_needed > COLUMN_NUMBER:
         raise ValueError(TABLE_LENGTH_ERROR.format(
             rows_needed=rows_needed,
-            columns_needed=columns_needed
+            columns_needed=columns_needed,
+            ROW_NUMBER=ROW_NUMBER,
+            COLUMN_NUMBER=COLUMN_NUMBER
         ))
     await wrapper_services.as_service_account(
         service.spreadsheets.values.update(

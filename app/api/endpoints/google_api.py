@@ -42,7 +42,7 @@ async def get_report(
             projects=projects,
             wrapper_services=wrapper_services
         )
-    except ClientError as e:
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=REQUEST_ERROR.format(e=e)
