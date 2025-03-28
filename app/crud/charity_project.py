@@ -9,7 +9,7 @@ class CharityProjectCRUD(CRUDBase):
     async def get_projects_by_completion_rate(
         self, session: AsyncSession
     ) -> list[dict[str, str]]:
-        result = await session.execute(
+        return await session.execute(
             select(
                 CharityProject.name,
                 CharityProject.create_date,
@@ -18,8 +18,7 @@ class CharityProjectCRUD(CRUDBase):
             ).where(
                 CharityProject.fully_invested.is_(True)
             )
-        )
-        return result.all()
+        ).all()
 
 
 charity_project_crud = CharityProjectCRUD(CharityProject)

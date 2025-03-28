@@ -2,18 +2,20 @@ from datetime import datetime, timedelta
 from operator import itemgetter
 
 from aiogoogle import Aiogoogle
-import aiohttp
-from fastapi import HTTPException, status
 
 from app.core.config import settings
 
 
 API_ERROR = 'Ошибка при обращении к Google API: {e}'
+TABLE_LENGTH_ERROR = (
+    'Таблица больше доступного места!'
+    'Размер этой таблицы: {rows_needed}x{columns_needed}, '
+    'доступный размер: {ROW_NUMBER}x{COLUMN_NUMBER}'
+)
 FORMAT = '%Y/%m/%d %H:%M:%S'
 REPORT_HEAD = 'Отчёт от {date}'
 ROW_NUMBER = 100
 COLUMN_NUMBER = 10
-TABLE_RANGE = 'R1C1:R{ROW_NUMBER}C{COLUMN_NUMBER}'
 SPREADHSEET_BODY = dict(
     properties=dict(
         title='',
@@ -43,8 +45,7 @@ async def spreadsheets_create(wrapper_services: Aiogoogle) -> str:
         REPORT_HEAD.format(date=datetime.now().strftime(FORMAT)))
     response = await wrapper_services.as_service_account(
         service.spreadsheets.create(json=spreadsheet_body))
-    spreadsheetid = response['spreadsheetId']
-    return spreadsheetid
+    return response['spreadsheetId'], response['spreadsheetUrl']
 
 
 async def set_user_permissions(
@@ -93,8 +94,8 @@ async def spreadsheets_update_value(
     sorted_projects.sort(key=itemgetter('total_seconds'))
     table_head = TABLE_HEAD.copy()
     table_values = [
-        *[head[1].format(
-            date=datetime.now().strftime(FORMAT)) for head in table_head],
+        *[head[1].format(date=datetime.now().strftime(FORMAT)) if isinstance(
+            head[1], str) else head[1] for head in table_head],
         *[list(map(
             str, [project['name'], project['duration'], project['description']]
         )) for project in sorted_projects]
@@ -103,17 +104,18 @@ async def spreadsheets_update_value(
         'majorDimension': 'ROWS',
         'values': table_values
     }
-    try:
-        await wrapper_services.as_service_account(
-            service.spreadsheets.values.update(
-                spreadsheetId=spreadsheet_id,
-                range=TABLE_RANGE,
-                valueInputOption='USER_ENTERED',
-                json=update_body
-            )
+    rows_needed = len(table_values)
+    columns_needed = len(table_values[0]) if rows_needed > 0 else 0
+    if rows_needed > ROW_NUMBER or columns_needed > COLUMN_NUMBER:
+        raise ValueError(TABLE_LENGTH_ERROR.format(
+            rows_needed=rows_needed,
+            columns_needed=columns_needed
+        ))
+    await wrapper_services.as_service_account(
+        service.spreadsheets.values.update(
+            spreadsheetId=spreadsheet_id,
+            range='R1C1:R{rows_needed}C{columns_needed}',
+            valueInputOption='USER_ENTERED',
+            json=update_body
         )
-    except aiohttp.ClientError as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=API_ERROR.format(e=e)
-        )
+    )
