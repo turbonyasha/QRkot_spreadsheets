@@ -93,7 +93,7 @@ async def spreadsheets_update_value(
         })
     sorted_projects.sort(key=itemgetter('total_seconds'))
     table_head = TABLE_HEAD.copy()
-    table_head[1][1] = datetime.now().strftime(FORMAT)
+    table_head[0][1] = datetime.now().strftime(FORMAT)
     table_values = [
         *table_head,
         *[list(map(
