@@ -1,5 +1,4 @@
 from aiogoogle import Aiogoogle
-from aiohttp import ClientError
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
